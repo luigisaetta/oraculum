@@ -1,0 +1,24 @@
+[general]
+verbose = false
+debug = false
+
+[llm]
+auth_type = "API_KEY"
+temperature = 0
+max_tokens = 2048
+
+models_list = [
+    "meta.llama-3.1-70b-instruct",
+    "cohere.command-r-plus-08-2024",
+    "meta.llama-3.1-405b-instruct",
+]
+# now every model has its own endpoint, check carefully
+# must be aligned to MODEL_LIST (405B in Chicago)
+models_endpoints = [
+    "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com",
+    "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com",
+    "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com",
+]
+
+# for the router use command-r-plus !!!
+index_model_for_routing = 1
