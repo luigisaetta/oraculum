@@ -28,12 +28,6 @@ Warnings:
 """
 
 from langchain_community.chat_models.oci_generative_ai import ChatOCIGenAI
-from config_reader import ConfigReader
-
-# get onfiguration
-config = ConfigReader("config.toml")
-AUTH_TYPE = config.find_key("auth_type")
-MAX_TOKENS = config.find_key("max_tokens")
 
 
 class LLMManager:
@@ -41,13 +35,10 @@ class LLMManager:
     The class handle all the LLM-related tasks
     """
 
-    def __init__(
-        self, model_list, model_endpoints, compartment_id, temperature, logger
-    ):
-        self.model_list = model_list
-        self.model_endpoints = model_endpoints
+    def __init__(self, config, compartment_id, logger):
+        # save the config
+        self.config = config
         self.compartment_id = compartment_id
-        self.temperature = temperature
         self.logger = logger
         self.llm_models = self.initialize_models()
 
@@ -55,22 +46,28 @@ class LLMManager:
         """
         Initialise the list of ChatModels to be used to generate SQL
         """
+        verbose = bool(self.config.find_key("verbose"))
+
         self.logger.info("LLMManager: Initialising the list of models...")
 
+        models_list = self.config.find_key("models_list")
+        models_endpoints = self.config.find_key("models_endpoints")
+
         models = []
-        for model, endpoint in zip(self.model_list, self.model_endpoints):
-            self.logger.info("Model: %s", model)
+        for model, endpoint in zip(models_list, models_endpoints):
+            if verbose:
+                self.logger.info("Model: %s", model)
 
             models.append(
                 ChatOCIGenAI(
                     # modified to support non-default auth (inst_princ..)
-                    auth_type=AUTH_TYPE,
+                    auth_type=self.config.find_key("auth_type"),
                     model_id=model,
                     service_endpoint=endpoint,
                     compartment_id=self.compartment_id,
                     model_kwargs={
-                        "temperature": self.temperature,
-                        "max_tokens": MAX_TOKENS,
+                        "temperature": self.config.find_key("temperature"),
+                        "max_tokens": self.config.find_key("max_tokens"),
                     },
                 )
             )

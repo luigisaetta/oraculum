@@ -55,7 +55,7 @@ json_schema = {
 }
 
 # get onfiguration
-config = ConfigReader("config.toml")
+config = ConfigReader("./config.toml")
 DEBUG = bool(config.find_key("debug"))
 INDEX_MODEL_FOR_ROUTING = config.find_key("index_model_for_routing")
 

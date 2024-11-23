@@ -28,6 +28,7 @@ Warnings:
 """
 
 import toml
+from utils import get_console_logger
 
 
 class ConfigReader:
@@ -42,6 +43,7 @@ class ConfigReader:
         """
         self.file_path = file_path
         self.data = None
+        self.logger = get_console_logger()
         self.load_file()
 
     def load_file(self):
@@ -52,10 +54,10 @@ class ConfigReader:
             with open(self.file_path, "r", encoding="utf-8") as f:
                 self.data = toml.load(f)
         except FileNotFoundError:
-            print(f"Error: The file {self.file_path} does not exist.")
+            self.logger.error("Error: The file %s does not exist.", self.file_path)
             self.data = {}
         except Exception as e:
-            print(f"Error while reading the TOML file: {e}")
+            self.logger.error("Error while reading the TOML file: %s", e)
             self.data = {}
 
     def find_key(self, key_name):
@@ -77,6 +79,6 @@ class ConfigReader:
 
         # Search for the key in the already loaded file
         if self.data is None:
-            print("Error: No TOML file loaded.")
+            self.logger.error("Error: No TOML file loaded.")
             return None
         return recursive_search(self.data, key_name)

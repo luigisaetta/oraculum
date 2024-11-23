@@ -16,12 +16,14 @@ logger = get_console_logger()
 
 # read the configuration
 config = ConfigReader("config.toml")
-
-create_banner("Test routing")
+models_list = config.find_key("models_list")
+models_endpoints = config.find_key("models_endpoints")
 
 llm_manager = LLMManager(
-    config,
+    model_list=models_list,
+    model_endpoints=models_endpoints,
     compartment_id=COMPARTMENT_OCID,
+    temperature=0,
     logger=logger,
 )
 
@@ -40,6 +42,8 @@ LIST_QUERIES = [
     "Delete all the sales",
     "Read the data and tell me what is the country with highest sales?",
 ]
+
+create_banner("Test routing")
 
 for QUERY in LIST_QUERIES:
     logger.info("Query:         %s", QUERY)
