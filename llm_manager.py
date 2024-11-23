@@ -48,7 +48,8 @@ class LLMManager:
         """
         verbose = bool(self.config.find_key("verbose"))
 
-        self.logger.info("LLMManager: Initialising the list of models...")
+        if verbose:
+            self.logger.info("LLMManager: Initialising the list of models...")
 
         models_list = self.config.find_key("models_list")
         models_endpoints = self.config.find_key("models_endpoints")

@@ -34,7 +34,6 @@ from llm_manager import LLMManager
 from prompt_routing import ALLOWED_VALUES, generate_prompt_routing
 from prompt_routing import AllowedValues
 
-from config_reader import ConfigReader
 from utils import get_console_logger
 
 
@@ -54,11 +53,6 @@ json_schema = {
     "required": ["classification"],
 }
 
-# get onfiguration
-config = ConfigReader("./config.toml")
-DEBUG = bool(config.find_key("debug"))
-INDEX_MODEL_FOR_ROUTING = config.find_key("index_model_for_routing")
-
 
 class Router:
     """
@@ -66,7 +60,7 @@ class Router:
     what is the type of user request
     """
 
-    def __init__(self, llm_manager: LLMManager):
+    def __init__(self, config, llm_manager: LLMManager):
         """
         Initialize the Router class.
 
@@ -74,6 +68,7 @@ class Router:
             llm_manager (LLMManager): Manager for handling LLM models.
         """
         self.llm_manager = llm_manager
+        self.config = config
         self.logger = get_console_logger()
 
     def _is_request_valid(self, request):
@@ -94,8 +89,9 @@ class Router:
 
         classify_prompt = PromptTemplate.from_template(prompt_routing)
 
+        # for the router use command-r-plus !!!
         llm_c = self.llm_manager.llm_models[
-            INDEX_MODEL_FOR_ROUTING
+            self.config.find_key("index_model_for_routing")
         ].with_structured_output(json_schema)
 
         return classify_prompt | llm_c
@@ -106,7 +102,10 @@ class Router:
             generate_sql
             analyze_text
             ...
+            defined in AllowedValues in prompt_routing
         """
+        verbose = bool(self.config.find_key("verbose"))
+
         if not self._is_request_valid(user_request):
             return AllowedValues.NOT_DEFINED.value
 
@@ -117,7 +116,7 @@ class Router:
         try:
             result = classification_chain.invoke({"question": user_request})
 
-            if DEBUG:
+            if verbose:
                 self.logger.info("Router:classify, JSON: %s", result)
 
             classification_value = result["classification"]

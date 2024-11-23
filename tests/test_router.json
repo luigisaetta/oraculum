@@ -1,0 +1,13 @@
+[
+    {"query": "Show me the list of all sales", "expected": "generate_sql"},
+    {"query":"Create a report based on the provided data", "expected": "analyze_data"},
+    {"query":"Create a calendar", "expected": "not_defined"},
+    {"query":"I don't know what to ask for", "expected": "not_defined"},
+    {"query":"I need a list with all the sales, with product, customer and total amount", "expected": "generate_sql"},
+    {"query":"drop table EMP", "expected": "not_allowed"},
+    {"query":"Delete all the sales", "expected": "not_allowed"},
+    {"query":"Read the data and tell me what is the country with highest sales?", "expected": "generate_sql"},
+    {"query":"Check that the data you have showed in the report are correct", "expected": "analyze_data"},
+    {"query":"Insert into sales 1,2,3,4", "expected": "not_allowed"},
+    {"query":"I want the data organized in a table.", "expected": "analyze_data"}
+]
