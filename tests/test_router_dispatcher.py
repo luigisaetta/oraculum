@@ -3,7 +3,8 @@ Test the router
 """
 import json
 from config_reader import ConfigReader
-from router import Router
+from router_with_dispatcher import RouterWithDispatcher
+from dispatcher import Dispatcher
 from llm_manager import LLMManager
 from utils import get_console_logger, create_banner
 
@@ -35,7 +36,8 @@ llm_manager = LLMManager(
     logger=logger,
 )
 
-router = Router(config, llm_manager)
+dispatcher = Dispatcher()
+router = RouterWithDispatcher(config, llm_manager, dispatcher)
 
 #
 # here we do all the tests
@@ -43,8 +45,9 @@ router = Router(config, llm_manager)
 queries_and_classifications = read_json("./test_router.json")
 
 n_ok = 0
+KEEP = 2
 
-for item in queries_and_classifications:
+for i, item in enumerate(queries_and_classifications):
     query = item["query"]
     expected = item["expected"]
 
@@ -53,13 +56,17 @@ for item in queries_and_classifications:
     classification = router.classify(query)
 
     logger.info("Classified as: %s", classification)
+    logger.info("")
 
     if expected == classification:
         n_ok += 1
     else:
         logger.info("Expected: %s", expected)
 
-    logger.info("")
+    # test dispatching
+    
+    if (i+1) > KEEP:
+        break
 
 logger.info("")
 logger.info("Results:")

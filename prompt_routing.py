@@ -14,6 +14,7 @@ class AllowedValues(Enum):
 
     GENERATE_SQL = "generate_sql"
     ANALYZE_DATA = "analyze_data"
+    ANSWER_DIRECTLY = "answer_directly"
     NOT_DEFINED = "not_defined"
     NOT_ALLOWED = "not_allowed"
 
@@ -32,7 +33,8 @@ Instructions:
 - if the request needs to read data from database the classification must be: generate_sql
 - if the request requires analysis of data from a LLM the classification must be: analyze_data
 - if the request is for clarification or contains a question on a report you generated the classification must be: analyze_data
-- if the request asks to drop a table, delete data, update data or insert data, the classification must be: not_allowed 
+- if the request asks to drop a table, delete data, update data or insert data, the classification must be: not_allowed
+- if the request is for an information you can directly provide, classification must be: answer_directly
 - if you don't have enough information to classify, the classification must be: not_defined
 - provide only the JSON result. Don't add other comments or questions.
 - enclose always the array in triple backtick, don't start with 'json'
@@ -79,6 +81,9 @@ Classification: analyze_data
 
 User Query: What are the kind of questions I can ask on these data?
 Classification: analyze_data
+
+User Query: Who is Larry Ellison?
+Classification: answer_directly
 
 ===Question
 {{question}}

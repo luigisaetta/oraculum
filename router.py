@@ -114,6 +114,9 @@ class Router:
 
         # invoke the LLM, output is a dict
         try:
+            if verbose:
+                self.logger.info("Request: %s", user_request)
+
             result = classification_chain.invoke({"question": user_request})
 
             if verbose:
