@@ -32,6 +32,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
+from conversation_manager import ConversationManager
 from llm_manager import LLMManager
 from dispatcher import Dispatcher
 from router_with_dispatcher import RouterWithDispatcher
@@ -53,8 +54,10 @@ class UserRequest(BaseModel):
 
 
 logger = get_console_logger()
-
 config = ConfigReader("./config.toml")
+
+VERBOSE = bool(config.find_key("verbose"))
+MAX_MSGS = config.find_key("max_msgs")
 
 # Initialize router and dispatcher
 llm_manager = LLMManager(
@@ -67,17 +70,21 @@ router_w = RouterWithDispatcher(config, llm_manager, dispatcher)
 
 app = FastAPI()
 
+# Initialize ConversationManager
+conversation_manager = ConversationManager(max_msgs=MAX_MSGS, verbose=VERBOSE)
+
 
 @app.post("/streaming_chat")
 async def streaming_chat(user_request: UserRequest):
     """
     handle the streaming chat
     """
-    try:
-        if not user_request.request.strip():
-            raise HTTPException(status_code=400, detail="Request cannot be empty.")
+    if not user_request.request.strip():
+        raise HTTPException(status_code=400, detail="Request cannot be empty.")
 
+    try:
         response_stream = await router_w.route_request(user_request.request)
+
         return StreamingResponse(response_stream, media_type=TEXT_PLAIN)
 
     except Exception as e:

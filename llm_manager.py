@@ -79,3 +79,40 @@ class LLMManager:
         return the list of initialised models
         """
         return self.llm_models
+
+    def get_llm_model_name(self, model_index):
+        """
+        get the name of a model (see config.toml)
+        """
+        models_list = self.config.find_key("models_list")
+
+        return models_list[model_index]
+
+    def get_llm_model_endpoint(self, model_index):
+        """
+        get the endpoint of a model (see config.toml)
+        """
+        models_endpoints = self.config.find_key("models_endpoints")
+
+        return models_endpoints[model_index]
+
+    def get_llm_model(self, model_index):
+        """
+        added to see if it solves the problem with connections
+        """
+        model_name = self.get_llm_model_name(model_index)
+        endpoint = self.get_llm_model_endpoint(model_index)
+
+        chat = ChatOCIGenAI(
+            # modified to support non-default auth (inst_princ..)
+            auth_type=self.config.find_key("auth_type"),
+            model_id=model_name,
+            service_endpoint=endpoint,
+            compartment_id=self.compartment_id,
+            model_kwargs={
+                "temperature": self.config.find_key("temperature"),
+                "max_tokens": self.config.find_key("max_tokens"),
+            },
+        )
+
+        return chat

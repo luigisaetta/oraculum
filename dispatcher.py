@@ -30,6 +30,7 @@ Warnings:
 import asyncio
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompt_routing import AllowedValues
+from prompts_models import PREAMBLE_ANSWER_DIRECTLY
 from utils import get_console_logger
 
 
@@ -117,16 +118,17 @@ class Dispatcher:
 
     async def _wrap_generator(self, generator):
         """
-        Converte un generatore normale in un generatore asincrono.
+        Convert a normal generator in an asynch generator
 
         Args:
             generator: Generatore normale.
 
         Yields:
-            Valori del generatore.
+            Value from generator
         """
         for item in generator:
-            await asyncio.sleep(0)  # Rende il ciclo cooperativo
+            # make the cycle cooperative
+            await asyncio.sleep(0)
             yield item
 
     async def handle_answer_directly(self, user_request: str):
@@ -140,17 +142,32 @@ class Dispatcher:
             str: Partial responses for streaming.
         """
         verbose = bool(self.config.find_key("verbose"))
+        index_model_answer_directly = self.config.find_key(
+            "index_model_answer_directly"
+        )
 
         messages = [
-            # TODO improve this prompt
-            SystemMessage(content="You are an AI assistant."),
+            # we should add here the conversation history
+            SystemMessage(content=PREAMBLE_ANSWER_DIRECTLY),
             HumanMessage(content=user_request),
         ]
 
         if verbose:
-            self.logger.info("calling model...")
-            
-        generator = self.llm_manager.get_llm_models()[0].stream(messages)
+            self.logger.info(
+                "calling Model %s...",
+                self.llm_manager.get_llm_model_name(index_model_answer_directly),
+            )
+            self.logger.info("")
+
+        # simulate partial response
+        await asyncio.sleep(0.4)
+        yield f"Request: {user_request}\n"
+        await asyncio.sleep(0.8)
+        yield "answer in preparation...\n\n"
+
+        generator = self.llm_manager.get_llm_model(index_model_answer_directly).stream(
+            messages
+        )
 
         async for chunk in self._wrap_generator(generator):
             yield str(chunk.content)

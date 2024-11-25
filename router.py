@@ -89,10 +89,9 @@ class Router:
 
         classify_prompt = PromptTemplate.from_template(prompt_routing)
 
-        # for the router use command-r-plus !!!
-        llm_c = self.llm_manager.llm_models[
+        llm_c = self.llm_manager.get_llm_model(
             self.config.find_key("index_model_for_routing")
-        ].with_structured_output(json_schema)
+        ).with_structured_output(json_schema)
 
         return classify_prompt | llm_c
 
@@ -112,11 +111,11 @@ class Router:
         # the chain
         classification_chain = self._get_classification_chain()
 
-        # invoke the LLM, output is a dict
         try:
             if verbose:
                 self.logger.info("Request: %s", user_request)
 
+            # invoke the LLM, output is a dict
             result = classification_chain.invoke({"question": user_request})
 
             if verbose:
