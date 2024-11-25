@@ -1,7 +1,7 @@
 """
 File name: llm_manager.py
 Author: Luigi Saetta
-Date last modified: 2024-10-21
+Date last modified: 2024-10-25
 Python Version: 3.11
 
 Description:
@@ -40,45 +40,6 @@ class LLMManager:
         self.config = config
         self.compartment_id = compartment_id
         self.logger = logger
-        self.llm_models = self.initialize_models()
-
-    def initialize_models(self):
-        """
-        Initialise the list of ChatModels to be used to generate SQL
-        """
-        verbose = bool(self.config.find_key("verbose"))
-
-        if verbose:
-            self.logger.info("LLMManager: Initialising the list of models...")
-
-        models_list = self.config.find_key("models_list")
-        models_endpoints = self.config.find_key("models_endpoints")
-
-        models = []
-        for model, endpoint in zip(models_list, models_endpoints):
-            if verbose:
-                self.logger.info("Model: %s", model)
-
-            models.append(
-                ChatOCIGenAI(
-                    # modified to support non-default auth (inst_princ..)
-                    auth_type=self.config.find_key("auth_type"),
-                    model_id=model,
-                    service_endpoint=endpoint,
-                    compartment_id=self.compartment_id,
-                    model_kwargs={
-                        "temperature": self.config.find_key("temperature"),
-                        "max_tokens": self.config.find_key("max_tokens"),
-                    },
-                )
-            )
-        return models
-
-    def get_llm_models(self):
-        """
-        return the list of initialised models
-        """
-        return self.llm_models
 
     def get_llm_model_name(self, model_index):
         """

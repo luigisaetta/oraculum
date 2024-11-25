@@ -45,6 +45,9 @@ class ConversationManager:
         self.logger = get_console_logger()
 
     def _get_role(self, msg):
+        """
+        get the role from the message type
+        """
         if isinstance(msg, HumanMessage):
             role = "human"
         elif isinstance(msg, SystemMessage):
