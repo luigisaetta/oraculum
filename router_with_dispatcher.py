@@ -27,6 +27,7 @@ Warnings:
     This module is in development, may change in future versions.
 """
 
+from typing import List
 from dispatcher import Dispatcher
 from llm_manager import LLMManager
 from router import Router
@@ -42,7 +43,7 @@ class RouterWithDispatcher(Router):
         super().__init__(config, llm_manager)
         self.dispatcher = dispatcher
 
-    async def route_request(self, user_request: str):
+    async def route_request(self, user_request: str, message_history: List = None):
         """
         Route the user request after classification.
 
@@ -57,4 +58,6 @@ class RouterWithDispatcher(Router):
         if classification == AllowedValues.NOT_DEFINED.value:
             return "Unable to classify the request."
 
-        return await self.dispatcher.dispatch(classification, user_request)
+        return await self.dispatcher.dispatch(
+            classification, user_request, message_history
+        )

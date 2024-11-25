@@ -28,6 +28,7 @@ Warnings:
 """
 
 import asyncio
+from typing import List
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompt_routing import AllowedValues
 from prompts_models import PREAMBLE_ANSWER_DIRECTLY
@@ -53,7 +54,9 @@ class Dispatcher:
             # Add more mappings as needed
         }
 
-    async def dispatch(self, classification: str, user_request: str):
+    async def dispatch(
+        self, classification: str, user_request: str, message_history: List = None
+    ):
         """
         Route the request to the appropriate handler.
 
@@ -75,9 +78,11 @@ class Dispatcher:
         if verbose:
             self.logger.info("Dispatching request to handler for: %s", classification)
 
-        return handler(user_request)
+        return handler(user_request, message_history)
 
-    async def handle_generate_sql(self, user_request: str):
+    async def handle_generate_sql(
+        self, user_request: str, message_history: List = None
+    ):
         """
         Handle SQL generation requests.
 
@@ -92,7 +97,9 @@ class Dispatcher:
             await asyncio.sleep(0.4)
             yield f"SQL Part {i + 1} for: {user_request}\n"
 
-    async def handle_analyze_data(self, user_request: str):
+    async def handle_analyze_data(
+        self, user_request: str, message_history: List = None
+    ):
         """
         Handle text analysis requests.
 
@@ -107,7 +114,7 @@ class Dispatcher:
             await asyncio.sleep(0.4)
             yield f"Analysis Part {i + 1} for: {user_request}\n"
 
-    async def handle_not_allowed(self, user_request: str):
+    async def handle_not_allowed(self, user_request: str, message_history: List = None):
         """
         Handle reponse for not allowed requests
         """
@@ -131,7 +138,9 @@ class Dispatcher:
             await asyncio.sleep(0)
             yield item
 
-    async def handle_answer_directly(self, user_request: str):
+    async def handle_answer_directly(
+        self, user_request: str, message_history: List = None
+    ):
         """
         Handle direct request to Chat model
 
@@ -146,11 +155,15 @@ class Dispatcher:
             "index_model_answer_directly"
         )
 
-        messages = [
-            # we should add here the conversation history
+        # start with preamble
+        all_messages = [
             SystemMessage(content=PREAMBLE_ANSWER_DIRECTLY),
-            HumanMessage(content=user_request),
         ]
+        # add history
+        for msg in message_history:
+            all_messages.append(msg)
+        # add request
+        all_messages.append(HumanMessage(content=user_request))
 
         if verbose:
             self.logger.info(
@@ -166,7 +179,7 @@ class Dispatcher:
         yield "answer in preparation...\n\n"
 
         generator = self.llm_manager.get_llm_model(index_model_answer_directly).stream(
-            messages
+            all_messages
         )
 
         async for chunk in self._wrap_generator(generator):

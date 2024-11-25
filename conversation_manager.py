@@ -14,7 +14,7 @@ License:
 """
 
 from typing import Dict, List, Union
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
 from utils import get_console_logger
 
 
@@ -44,6 +44,18 @@ class ConversationManager:
         self.verbose = verbose
         self.logger = get_console_logger()
 
+    def _get_role(self, msg):
+        if isinstance(msg, HumanMessage):
+            role = "human"
+        elif isinstance(msg, SystemMessage):
+            role = "system"
+        elif isinstance(msg, AIMessage):
+            role = "ai"
+        else:
+            role = "unknown"
+
+        return role
+
     def _message_to_dict(self, msg: BaseMessage) -> Dict[str, Union[str, None]]:
         """
         Converts a BaseMessage to a dictionary format.
@@ -54,22 +66,35 @@ class ConversationManager:
         Returns:
             Dict[str, Union[str, None]]: A dictionary with `role` and `content`.
         """
+        role = self._get_role(msg)
+
         return {
-            "role": msg.role if hasattr(msg, "role") else "unknown",
+            "role": role,
             "content": msg.content,
         }
 
     def _dict_to_message(self, msg_dict: Dict[str, Union[str, None]]) -> BaseMessage:
         """
-        Converts a dictionary back to a BaseMessage.
+        Converts a dictionary back to a BaseMessage based on the role.
 
         Args:
             msg_dict (Dict[str, Union[str, None]]): The message dictionary.
 
         Returns:
-            BaseMessage: A reconstructed BaseMessage object.
+            BaseMessage: A reconstructed BaseMessage object of the correct type.
         """
-        return BaseMessage(content=msg_dict["content"], role=msg_dict["role"])
+        role = msg_dict.get("role")
+        content = msg_dict.get("content", "")
+
+        if role == "human":
+            return HumanMessage(content=content)
+        if role == "system":
+            return SystemMessage(content=content)
+        if role == "ai":
+            return AIMessage(content=content)
+
+        self.logger.warning("Unknown role '%s' encountered in message.", role)
+        return BaseMessage(content=content)  # Fallback to generic BaseMessage
 
     def add_message(self, conv_id: str, msg: BaseMessage):
         """
