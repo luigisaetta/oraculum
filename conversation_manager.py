@@ -44,20 +44,17 @@ class ConversationManager:
         self.verbose = verbose
         self.logger = get_console_logger()
 
-    def _get_role(self, msg):
+    def _get_role(self, msg: BaseMessage) -> str:
         """
-        get the role from the message type
+        get the role from the type of msg
         """
         if isinstance(msg, HumanMessage):
-            role = "human"
-        elif isinstance(msg, SystemMessage):
-            role = "system"
-        elif isinstance(msg, AIMessage):
-            role = "ai"
-        else:
-            role = "unknown"
-
-        return role
+            return "human"
+        if isinstance(msg, SystemMessage):
+            return "system"
+        if isinstance(msg, AIMessage):
+            return "ai"
+        raise ValueError(f"Unknown message type: {type(msg)}")
 
     def _message_to_dict(self, msg: BaseMessage) -> Dict[str, Union[str, None]]:
         """
@@ -97,7 +94,7 @@ class ConversationManager:
             return AIMessage(content=content)
 
         self.logger.warning("Unknown role '%s' encountered in message.", role)
-        return BaseMessage(content=content)  # Fallback to generic BaseMessage
+        raise ValueError(f"Unknown role '{role}' in message dictionary.")
 
     def add_message(self, conv_id: str, msg: BaseMessage):
         """

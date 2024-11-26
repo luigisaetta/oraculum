@@ -68,7 +68,6 @@ class Dispatcher:
             str: Response from the selected tool or an error message.
         """
         verbose = bool(self.config.find_key("verbose"))
-
         handler = self.tool_map.get(classification)
 
         if not handler:
