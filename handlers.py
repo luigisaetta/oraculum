@@ -5,7 +5,8 @@ Date last modified: 2024-11-26
 Python Version: 3.11
 
 Description:
-    Implements the handling logis
+    Implements the handling logic for the various
+    routing options
 
 Inspired by:
    
@@ -29,11 +30,20 @@ Warnings:
 
 import asyncio
 from langchain_core.messages import HumanMessage, SystemMessage
+from config_reader import ConfigReader
+from llm_manager import LLMManager
 from prompts_models import PREAMBLE_ANSWER_DIRECTLY
+from config_private import COMPARTMENT_OCID
 from utils import get_console_logger
 
 
 logger = get_console_logger()
+config = ConfigReader("./config.toml")
+llm_manager = LLMManager(
+    config,
+    compartment_id=COMPARTMENT_OCID,
+    logger=logger,
+)
 
 
 async def handle_generate_sql(user_request: str, message_history: list = None):
@@ -80,9 +90,7 @@ async def _wrap_generator(generator):
         yield item
 
 
-async def handle_answer_directly(
-    user_request: str, message_history: list = None, config=None, llm_manager=None
-):
+async def handle_answer_directly(user_request: str, message_history: list = None):
     """
     Handle direct request to Chat model.
     """
