@@ -50,7 +50,7 @@ class Dispatcher:
         self.config = config
         self.llm_manager = llm_manager
 
-        # Mapping classification values to handler functions
+        # Mapping classification values to handler functions (in handlers.py)
         self.tool_map = {
             AllowedValues.GENERATE_SQL.value: handle_generate_sql,
             AllowedValues.ANALYZE_DATA.value: handle_analyze_data,
@@ -58,6 +58,12 @@ class Dispatcher:
             AllowedValues.NOT_ALLOWED.value: handle_not_allowed,
             # Add more mappings as needed
         }
+
+    def get_supported_values(self):
+        """
+        Returns a list of classification values supported by the dispatcher.
+        """
+        return list(self.tool_map.keys())
 
     async def dispatch(
         self, classification: str, user_request: str, message_history: List = None
@@ -77,7 +83,7 @@ class Dispatcher:
 
         if not handler:
             self.logger.error("No handler found for classification: %s", classification)
-            return "Sorry, I don't know how to handle this request."
+            raise ValueError("Sorry, I don't know how to handle this request.")
 
         if verbose:
             self.logger.info("Dispatching request to handler for: %s", classification)

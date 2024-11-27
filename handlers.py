@@ -29,6 +29,7 @@ Warnings:
 """
 
 import asyncio
+from typing import List
 from langchain_core.messages import HumanMessage, SystemMessage
 from config_reader import ConfigReader
 from llm_manager import LLMManager
@@ -45,26 +46,42 @@ llm_manager = LLMManager(
     logger=logger,
 )
 
+# 0.1 sec
+SMALL_STIME = 0.1
 
-async def handle_generate_sql(user_request: str, message_history: list = None):
+
+async def handle_generate_sql(user_request: str, message_history: List = None):
     """
     Handle SQL generation requests.
     """
-    for i in range(5):
-        await asyncio.sleep(0.4)
-        yield f"SQL Part {i + 1} for: {user_request}\n"
+    # simulate
+    yield f"SQL generation for: {user_request}\n"
+
+    await asyncio.sleep(5)
+    yield "SQL generated:\n"
+    for i in range(3):
+        await asyncio.sleep(0.1)
+        yield f"SQL Part {i + 1}\n"
+
+    # here we should simulate the table of results
+    await asyncio.sleep(3)
+    yield "\n"
+    yield "SQL results\n"
 
 
-async def handle_analyze_data(user_request: str, message_history: list = None):
+async def handle_analyze_data(user_request: str, message_history: List = None):
     """
     Handle text analysis requests.
     """
+    # simulate
+    await asyncio.sleep(2)
+    yield f"Report generated for: {user_request}\n"
     for i in range(3):
-        await asyncio.sleep(0.4)
-        yield f"Analysis Part {i + 1} for: {user_request}\n"
+        await asyncio.sleep(0.1)
+        yield f"Analysis Part {i + 1}\n"
 
 
-async def handle_not_allowed(user_request: str, message_history: list = None):
+async def handle_not_allowed(user_request: str, message_history: List = None):
     """
     Handle response for not allowed requests.
     """
@@ -77,6 +94,7 @@ async def handle_not_allowed(user_request: str, message_history: list = None):
 async def _wrap_generator(generator):
     """
     Convert a normal generator in an asynch generator
+    to be used bu answer directly
 
     Args:
         generator: Generatore normale.
@@ -90,12 +108,12 @@ async def _wrap_generator(generator):
         yield item
 
 
-async def handle_answer_directly(user_request: str, message_history: list = None):
+async def handle_answer_directly(user_request: str, message_history: List = None):
     """
     Handle direct request to Chat model.
     """
     verbose = bool(config.find_key("verbose"))
-    index_model_answer_directly = config.find_key("index_model_answer_directly")
+    model_index = config.find_key("index_model_answer_directly")
 
     # Start with preamble
     all_messages = [SystemMessage(content=PREAMBLE_ANSWER_DIRECTLY)]
@@ -106,18 +124,18 @@ async def handle_answer_directly(user_request: str, message_history: list = None
     if verbose:
         logger.info(
             "calling Model %s...",
-            llm_manager.get_llm_model_name(index_model_answer_directly),
+            llm_manager.get_llm_model_name(model_index),
         )
         logger.info("")
 
-    await asyncio.sleep(0.4)
+    await asyncio.sleep(SMALL_STIME)
     yield f"Request: {user_request}\n"
-    await asyncio.sleep(0.8)
+    await asyncio.sleep(SMALL_STIME)
     yield "Answer in preparation...\n\n"
 
-    generator = llm_manager.get_llm_model(index_model_answer_directly).stream(
-        all_messages
-    )
+    # call the model
+    generator = llm_manager.get_llm_model(model_index).stream(all_messages)
 
+    # need to correctly manage async response
     async for chunk in _wrap_generator(generator):
         yield str(chunk.content)
