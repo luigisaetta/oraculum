@@ -68,7 +68,7 @@ llm_manager = LLMManager(
     compartment_id=COMPARTMENT_OCID,
     logger=logger,
 )
-dispatcher = Dispatcher(config, llm_manager)
+dispatcher = Dispatcher(config)
 router_w = RouterWithDispatcher(config, llm_manager, dispatcher)
 
 app = FastAPI()

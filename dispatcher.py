@@ -45,10 +45,9 @@ class Dispatcher:
     Dispatcher to route classified requests to the appropriate handler/tool.
     """
 
-    def __init__(self, config, llm_manager):
+    def __init__(self, config):
         self.logger = get_console_logger()
         self.config = config
-        self.llm_manager = llm_manager
 
         # Mapping classification values to handler functions (in handlers.py)
         self.tool_map = {
@@ -79,6 +78,7 @@ class Dispatcher:
             str: Response from the selected tool or an error message.
         """
         verbose = bool(self.config.find_key("verbose"))
+        # get the handler for the classification
         handler = self.tool_map.get(classification)
 
         if not handler:

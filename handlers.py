@@ -33,6 +33,8 @@ from typing import List
 from langchain_core.messages import HumanMessage, SystemMessage
 from config_reader import ConfigReader
 from llm_manager import LLMManager
+from sql_agent import SQLAgent
+from select_ai_sql_agent import SelectAISQLAgent
 from prompts_models import PREAMBLE_ANSWER_DIRECTLY
 from config_private import COMPARTMENT_OCID
 from utils import get_console_logger
@@ -50,10 +52,68 @@ llm_manager = LLMManager(
 SMALL_STIME = 0.1
 
 
+async def stream_markdown_table(rows):
+    """
+    Stream rows of data as a Markdown table with padded columns.
+    """
+    if not rows:
+        return
+
+    # Get headers and calculate maximum column widths
+    headers = rows[0].keys()
+    column_widths = {key: len(key) for key in headers}  # Start with header widths
+
+    # Update column widths based on row contents
+    for row in rows:
+        for key, value in row.items():
+            column_widths[key] = max(column_widths[key], len(str(value)))
+
+    # Generate the header row with padding
+    header_row = (
+        "| " + " | ".join(f"{key:<{column_widths[key]}}" for key in headers) + " |"
+    )
+    separator_row = (
+        "| " + " | ".join(f"{'-' * column_widths[key]}" for key in headers) + " |"
+    )
+    yield header_row + "\n"
+    yield separator_row + "\n"
+
+    # Stream each row with padded columns
+    for row in rows:
+        await asyncio.sleep(0.1)  # Simulate delay
+        data_row = (
+            "| "
+            + " | ".join(
+                f"{str(row.get(key, '')):<{column_widths[key]}}" for key in headers
+            )
+            + " |"
+        )
+        yield data_row + "\n"
+
+
+def sql_agent_factory(config: ConfigReader) -> SQLAgent:
+    """
+    get from config the sql_agent type
+    """
+    agent_type = config.find_key("sql_agent_type")
+
+    if agent_type == "select_ai":
+        # implementation is with Select AI
+        return SelectAISQLAgent()
+
+    # if we arrive here: error
+    raise ValueError(f"Unknown SQL agent type: {agent_type}")
+
+
 async def handle_generate_sql(user_request: str, message_history: List = None):
     """
     Handle SQL generation requests.
+
+    user_request: request in NL
     """
+    # get the agent
+    sql_agent = sql_agent_factory(config)
+
     # simulate
     yield f"SQL generation for: {user_request}\n"
 
@@ -66,7 +126,16 @@ async def handle_generate_sql(user_request: str, message_history: List = None):
     # here we should simulate the table of results
     await asyncio.sleep(3)
     yield "\n"
-    yield "SQL results\n"
+    yield "SQL results\n\n"
+
+    # simulate reading data
+    # result must be a list of dict
+    rows = sql_agent.execute_sql("TEST")
+
+    # streaming as JSON lines, good OK
+    # beware: the client must understand these are data and parse the output accordingly
+    async for markdown_line in stream_markdown_table(rows):
+        yield markdown_line
 
 
 async def handle_analyze_data(user_request: str, message_history: List = None):
