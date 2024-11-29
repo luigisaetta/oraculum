@@ -17,7 +17,7 @@ see: [Anaconda docs](https://docs.anaconda.com/)
 conda create -n oraculus python==3.11
 ```
 Obviously, you can change the name of the environment.
-The code has been tested with Python 3.11. If you want to change the version, you need to re-test.
+The code has been tested with `Python 3.11`. If you want to change the version, you need to re-test.
 
 ### Install all the libraries
 A list of the needed libraries is in the file libraries.txt

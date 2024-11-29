@@ -67,8 +67,8 @@ class RouterWithDispatcher(Router):
 ---
 
 ## 4. Dispatching Asynchronously with `Dispatcher`
-The `Dispatcher` is responsible for handling classified requests. While its implementation isn't shown here, we can infer its behavior:
-- It likely contains asynchronous methods (defined with `async`) that handle the execution of tasks based on the classification and user request.
+The `Dispatcher` is responsible for handling classified requests. 
+- It will call asynchronous methods (defined with `async`), contained in `handlers.py`, that handle the execution of tasks based on the classification and user request.
 - By returning a streaming response, it enables the API to send chunks of data to the client as they become available.
 
 ---
