@@ -1,0 +1,10 @@
+Libraries list:
+* oci
+* oracledb
+* langchain
+* langchain-community
+* fastapi
+* toml
+* black
+* pylint
+* mkdocs
