@@ -32,8 +32,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
-from langchain_core.messages import HumanMessage
-
 from conversation_manager import ConversationManager
 from llm_manager import LLMManager
 from dispatcher import Dispatcher
@@ -52,8 +50,9 @@ class UserRequest(BaseModel):
     Encapsulate the user request
     """
 
-    conv_id: str  # Unique conversation ID
-    request: str
+    # Unique conversation ID
+    conv_id: str
+    request_text: str
 
 
 logger = get_console_logger()
@@ -83,21 +82,19 @@ async def streaming_chat(user_request: UserRequest):
     handle the streaming chat
     """
     # only the text of the request
-    request_text = user_request.request
+    request_text = user_request.request_text
 
     if not request_text.strip():
         raise HTTPException(status_code=400, detail="Request cannot be empty.")
 
-    # add request to the the conversation
-    # first get previous messages
-    message_history = conversation_manager.get_conversation(user_request.conv_id)
-    # then add the request
-    conversation_manager.add_message(
-        user_request.conv_id, HumanMessage(content=request_text)
-    )
+    if VERBOSE:
+        logger.info("streaming_chat, received request: %s", request_text)
+
+    # create the conversation, if not exists
+    conversation = conversation_manager.get_conversation(user_request.conv_id)
 
     try:
-        response_stream = await router_w.route_request(request_text, message_history)
+        response_stream = await router_w.route_request(user_request)
 
         # TODO add response to history
         return StreamingResponse(response_stream, media_type=TEXT_PLAIN)

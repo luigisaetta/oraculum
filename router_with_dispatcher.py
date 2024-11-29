@@ -1,7 +1,7 @@
 """
 File name: router_with_disptacher.py
 Author: Luigi Saetta
-Date last modified: 2024-11-24
+Date last modified: 2024-11-29
 Python Version: 3.11
 
 Description:
@@ -27,7 +27,7 @@ Warnings:
     This module is in development, may change in future versions.
 """
 
-from typing import List
+from typing import Any
 from dispatcher import Dispatcher
 from llm_manager import LLMManager
 from router import Router
@@ -43,7 +43,7 @@ class RouterWithDispatcher(Router):
         super().__init__(config, llm_manager)
         self.dispatcher = dispatcher
 
-    async def route_request(self, user_request: str, message_history: List = None):
+    async def route_request(self, user_request: Any):
         """
         Route the user request after classification.
 
@@ -53,11 +53,9 @@ class RouterWithDispatcher(Router):
         Returns:
             Stream: Streaming response from the dispatcher.
         """
-        classification = self.classify(user_request)
+        classification = self.classify(user_request.request_text)
 
         if classification == AllowedValues.NOT_DEFINED.value:
             return "Unable to classify the request."
 
-        return await self.dispatcher.dispatch(
-            classification, user_request, message_history
-        )
+        return await self.dispatcher.dispatch(classification, user_request)

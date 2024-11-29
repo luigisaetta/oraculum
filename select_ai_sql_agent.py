@@ -1,5 +1,10 @@
 """
 SQL agent based on Select AI
+
+Select AI requires setup in the DB. 
+A very good guide is this one:
+    https://snicholspa.github.io/tips_tricks_howtos/autonomous_database/select_ai/
+    
 """
 
 import oracledb
@@ -57,6 +62,7 @@ class SelectAISQLAgent(SQLAgent):
                 # before, set the SelectAI profile
                 cursor.execute(set_profile_sql)
 
+                # select ai instruction to get the sql generated
                 showsql_command = f"SELECT AI showsql '{nl_request}'"
 
                 cursor.execute(showsql_command)

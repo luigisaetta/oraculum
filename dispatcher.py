@@ -27,7 +27,7 @@ Warnings:
     This module is in development, may change in future versions.
 """
 
-from typing import List
+from typing import Any
 
 from prompt_routing import AllowedValues
 
@@ -64,9 +64,7 @@ class Dispatcher:
         """
         return list(self.tool_map.keys())
 
-    async def dispatch(
-        self, classification: str, user_request: str, message_history: List = None
-    ):
+    async def dispatch(self, classification: str, user_request: Any):
         """
         Route the request to the appropriate handler.
 
@@ -88,4 +86,4 @@ class Dispatcher:
         if verbose:
             self.logger.info("Dispatching request to handler for: %s", classification)
 
-        return handler(user_request, message_history)
+        return handler(user_request)

@@ -29,24 +29,30 @@ Warnings:
 """
 
 import asyncio
-from typing import List
+from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from config_reader import ConfigReader
 from llm_manager import LLMManager
+from conversation_manager import ConversationManager
 from sql_agent import SQLAgent
 from select_ai_sql_agent import SelectAISQLAgent
-from prompts_models import PREAMBLE_ANSWER_DIRECTLY
+from prompts_models import PREAMBLE_ANSWER_DIRECTLY, PREAMBLE_ANALYZE_DATA
 from config_private import COMPARTMENT_OCID
 from utils import get_console_logger
 
-
 logger = get_console_logger()
 config = ConfigReader("./config.toml")
+
+VERBOSE = bool(config.find_key("verbose"))
+MAX_MSGS = config.find_key("max_msgs")
+
 llm_manager = LLMManager(
     config,
     compartment_id=COMPARTMENT_OCID,
     logger=logger,
 )
+# it is a singleton
+conversation_manager = ConversationManager(max_msgs=MAX_MSGS, verbose=VERBOSE)
 
 # 0.1 sec
 SMALL_STIME = 0.1
@@ -105,7 +111,7 @@ def sql_agent_factory(_config: ConfigReader) -> SQLAgent:
     raise ValueError(f"Unknown SQL agent type: {agent_type}")
 
 
-async def handle_generate_sql(user_request: str, message_history: List = None):
+async def handle_generate_sql(user_request: Any):
     """
     Handle SQL generation requests.
 
@@ -114,37 +120,69 @@ async def handle_generate_sql(user_request: str, message_history: List = None):
     # get the agent
     sql_agent = sql_agent_factory(config)
 
-    yield f"SQL generation for: {user_request}\n\n"
-    gen_sql = sql_agent.generate_sql(user_request)
+    yield f"SQL generation for: {user_request.request_text}\n\n"
+    gen_sql = sql_agent.generate_sql(user_request.request_text)
     yield f"SQL:\n{gen_sql}\n\n"
-    
+
     # result must be a list of dict
     yield "SQL results: \n\n"
     rows = sql_agent.execute_sql(gen_sql)
+
+    # add the data retrieved in the conversation, as system message
+    rows_as_str = "\n".join(str(item) for item in rows)
+    msg_text = (
+        f"Data retrieved for request: {user_request.request_text}:\n{rows_as_str}"
+    )
+
+    conversation_manager.add_message(
+        user_request.conv_id, SystemMessage(content=msg_text)
+    )
 
     # streaming, results are sent as markdown
     async for markdown_line in stream_markdown_table(rows):
         yield markdown_line
 
 
-async def handle_analyze_data(user_request: str, message_history: List = None):
+async def handle_analyze_data(user_request: Any):
     """
     Handle text analysis requests.
     """
-    # simulate
-    await asyncio.sleep(2)
-    yield f"Report generated for: {user_request}\n"
-    for i in range(3):
-        await asyncio.sleep(0.1)
-        yield f"Analysis Part {i + 1}\n"
+    verbose = bool(config.find_key("verbose"))
+    model_index = config.find_key("index_model_analyze_data")
+
+    # Start with preamble
+    all_messages = [SystemMessage(content=PREAMBLE_ANALYZE_DATA)]
+    message_history = conversation_manager.get_conversation(user_request.conv_id)
+    for msg in message_history:
+        all_messages.append(msg)
+    all_messages.append(HumanMessage(content=user_request.request_text))
+
+    if verbose:
+        logger.info(
+            "calling Model %s...",
+            llm_manager.get_llm_model_name(model_index),
+        )
+        logger.info("")
+
+    await asyncio.sleep(SMALL_STIME)
+    yield f"Request: {user_request.request_text}\n"
+    await asyncio.sleep(SMALL_STIME)
+    yield "Answer in preparation...\n\n"
+
+    # call the model
+    generator = llm_manager.get_llm_model(model_index).stream(all_messages)
+
+    # need to correctly manage async response
+    async for chunk in _wrap_generator(generator):
+        yield str(chunk.content)
 
 
-async def handle_not_allowed(user_request: str, message_history: List = None):
+async def handle_not_allowed(user_request: Any):
     """
     Handle response for not allowed requests.
     """
     await asyncio.sleep(0.1)
-    yield f"Request: {user_request} not allowed\n"
+    yield f"Request: {user_request.request_text} not allowed\n"
     await asyncio.sleep(0.1)
     yield "DDL/DML request are not allowed! \n"
 
@@ -166,7 +204,7 @@ async def _wrap_generator(generator):
         yield item
 
 
-async def handle_answer_directly(user_request: str, message_history: List = None):
+async def handle_answer_directly(user_request: Any):
     """
     Handle direct request to Chat model.
     """
@@ -175,6 +213,7 @@ async def handle_answer_directly(user_request: str, message_history: List = None
 
     # Start with preamble
     all_messages = [SystemMessage(content=PREAMBLE_ANSWER_DIRECTLY)]
+    message_history = conversation_manager.get_conversation(user_request.conv_id)
     for msg in message_history:
         all_messages.append(msg)
     all_messages.append(HumanMessage(content=user_request))
@@ -187,7 +226,7 @@ async def handle_answer_directly(user_request: str, message_history: List = None
         logger.info("")
 
     await asyncio.sleep(SMALL_STIME)
-    yield f"Request: {user_request}\n"
+    yield f"Request: {user_request.request_text}\n"
     await asyncio.sleep(SMALL_STIME)
     yield "Answer in preparation...\n\n"
 

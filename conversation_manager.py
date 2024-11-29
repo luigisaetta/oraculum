@@ -1,7 +1,7 @@
 """
 Module: conversation_manager.py
 Author: Luigi Saetta
-Date last modified: 2024-11-25
+Date last modified: 2024-11-29
 Python Version: 3.11
 
 Description:
@@ -20,7 +20,7 @@ from utils import get_console_logger
 
 class ConversationManager:
     """
-    A class to manage conversation history for an AI Assistant.
+    A Singleton class to manage conversation history for an AI Assistant.
 
     Stores messages as dictionaries but reconstructs BaseMessage objects
     when fetching conversation history.
@@ -31,6 +31,16 @@ class ConversationManager:
         logger: Logger instance for logging messages.
     """
 
+    _instance = None  # Class-level attribute to store the singleton instance
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Override the __new__ method to ensure only one instance of the class is created.
+        """
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, max_msgs: int, verbose: bool = False):
         """
         Initializes the conversation manager.
@@ -39,14 +49,16 @@ class ConversationManager:
             max_msgs (int): Maximum number of messages to retain in a conversation.
             verbose (bool): Flag to enable verbose logging. Default is False.
         """
-        self.conversations: Dict[str, List[Dict[str, Union[str, None]]]] = {}
-        self.max_msgs = max_msgs
-        self.verbose = verbose
-        self.logger = get_console_logger()
+        # Only initialize attributes if they haven't been initialized yet
+        if not hasattr(self, "conversations"):
+            self.conversations: Dict[str, List[Dict[str, Union[str, None]]]] = {}
+            self.max_msgs = max_msgs
+            self.verbose = verbose
+            self.logger = get_console_logger()
 
     def _get_role(self, msg: BaseMessage) -> str:
         """
-        get the role from the type of msg
+        Get the role from the type of msg.
         """
         if isinstance(msg, HumanMessage):
             return "human"
@@ -108,12 +120,11 @@ class ConversationManager:
             msg (BaseMessage): The message to add.
         """
         if conv_id not in self.conversations:
-            if self.verbose:
-                self.logger.info("Creating new conversation with ID: %s", conv_id)
+            self.logger.info("Creating new conversation with ID: %s", conv_id)
             self.conversations[conv_id] = []
 
         # Convert the BaseMessage to a dictionary and add it
-        # msgs are stored in a format that is independent of LangChain
+        # Messages are stored in a format that is independent of LangChain
         conversation = self.conversations[conv_id]
         conversation.append(self._message_to_dict(msg))
 
@@ -133,6 +144,11 @@ class ConversationManager:
         Returns:
             List[BaseMessage]: The list of messages reconstructed as BaseMessage objects.
         """
+        # if the conversation not exist, create it empty
+        if conv_id not in self.conversations:
+            self.logger.info("Creating new conversation with ID: %s", conv_id)
+            self.conversations[conv_id] = []
+
         messages = self.conversations.get(conv_id, [])
         return [self._dict_to_message(msg_dict) for msg_dict in messages]
 
