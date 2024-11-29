@@ -4,7 +4,9 @@ SQL agent based on Select AI
 
 import oracledb
 from sql_agent import SQLAgent
+from config_reader import ConfigReader
 from config_private import DB_USER, DB_PWD, DSN, WALLET_DIR, WALLET_PWD
+from utils import get_console_logger
 
 CONNECT_ARGS = {
     "user": DB_USER,
@@ -15,11 +17,19 @@ CONNECT_ARGS = {
     "wallet_password": WALLET_PWD,
 }
 
+logger = get_console_logger()
+
 
 class SelectAISQLAgent(SQLAgent):
     """
     Implementation of the SQL Agent based on Select AI
     """
+
+    def __init__(self, config: ConfigReader):
+        """
+        init
+        """
+        self.config = config
 
     def get_db_connection(self):
         """
@@ -28,13 +38,81 @@ class SelectAISQLAgent(SQLAgent):
         return oracledb.connect(**CONNECT_ARGS)
 
     def generate_sql(self, nl_request: str) -> str:
-        # Simula un modello AI che genera SQL
-        return f"SELECT * FROM data WHERE description LIKE '%{nl_request}%'"
+        """
+        Generate SQL using Select AI
+        """
+        verbose = self.config.find_key("verbose")
+        profile_name = self.config.find_key("profile_name")
+
+        set_profile_sql = f"""BEGIN
+            DBMS_CLOUD_AI.SET_PROFILE('{profile_name}'); 
+        END;"""
+
+        gen_sql = ""
+
+        logger.info("Generating SQL...")
+
+        with self.get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                # before, set the SelectAI profile
+                cursor.execute(set_profile_sql)
+
+                showsql_command = f"SELECT AI showsql '{nl_request}'"
+
+                cursor.execute(showsql_command)
+
+                for row in cursor:
+                    gen_sql = row[0]
+
+                    if verbose:
+                        logger.info(gen_sql)
+                    break
+
+        return gen_sql
+
+    def check_sql(self, sql):
+        """
+        Check SQL syntax
+        """
+        try:
+            with self.get_db_connection() as conn:
+                with conn.cursor() as cursor:
+                    explain_sql = f"EXPLAIN PLAN FOR {sql}"
+                    cursor.execute(explain_sql)
+            return True
+        except oracledb.DatabaseError as e:
+            (error,) = e.args
+            logger.error("Database error: %s", error.message)
+            logger.error("Invalid SQL: %s", sql)
+        except Exception as e:
+            logger.error("Unexpected error: %s", e)
+        return False
 
     def execute_sql(self, sql: str) -> list[dict]:
-        # Simula l'esecuzione SQL e il ritorno dei risultati
-        return [
-            {"name": "Alice", "age": 25, "city": "New York"},
-            {"name": "Bob", "age": 30, "city": "San Francisco"},
-            {"name": "Charlie", "age": 35, "city": "Chicago"},
-        ]
+        """
+        Execute the provided SQL and return results as a list of dictionaries.
+
+        Args:
+            sql (str): SQL query to execute.
+
+        Returns:
+            list[dict]: Query results, with each row represented as a dictionary.
+        """
+        results = []
+        if self.check_sql(sql):
+            logger.info("SQL validated. Executing...")
+            try:
+                with self.get_db_connection() as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(sql)
+                        columns = [col[0] for col in cursor.description]
+                        for row in cursor:
+                            results.append(dict(zip(columns, row)))
+
+                logger.info("Executed successfully. Rows fetched: %d", len(results))
+            except Exception as e:
+                logger.error("Error executing SQL: %s", sql)
+                logger.error(e)
+        else:
+            logger.warning("SQL validation failed. Execution skipped.")
+        return results

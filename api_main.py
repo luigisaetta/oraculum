@@ -82,11 +82,11 @@ async def streaming_chat(user_request: UserRequest):
     """
     handle the streaming chat
     """
-    if not user_request.request.strip():
-        raise HTTPException(status_code=400, detail="Request cannot be empty.")
-
     # only the text of the request
     request_text = user_request.request
+
+    if not request_text.strip():
+        raise HTTPException(status_code=400, detail="Request cannot be empty.")
 
     # add request to the the conversation
     # first get previous messages

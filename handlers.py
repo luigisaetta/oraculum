@@ -91,15 +91,15 @@ async def stream_markdown_table(rows):
         yield data_row + "\n"
 
 
-def sql_agent_factory(config: ConfigReader) -> SQLAgent:
+def sql_agent_factory(_config: ConfigReader) -> SQLAgent:
     """
     get from config the sql_agent type
     """
-    agent_type = config.find_key("sql_agent_type")
+    agent_type = _config.find_key("sql_agent_type")
 
     if agent_type == "select_ai":
         # implementation is with Select AI
-        return SelectAISQLAgent()
+        return SelectAISQLAgent(config)
 
     # if we arrive here: error
     raise ValueError(f"Unknown SQL agent type: {agent_type}")
@@ -114,26 +114,15 @@ async def handle_generate_sql(user_request: str, message_history: List = None):
     # get the agent
     sql_agent = sql_agent_factory(config)
 
-    # simulate
-    yield f"SQL generation for: {user_request}\n"
-
-    await asyncio.sleep(5)
-    yield "SQL generated:\n"
-    for i in range(3):
-        await asyncio.sleep(0.1)
-        yield f"SQL Part {i + 1}\n"
-
-    # here we should simulate the table of results
-    await asyncio.sleep(3)
-    yield "\n"
-    yield "SQL results\n\n"
-
-    # simulate reading data
+    yield f"SQL generation for: {user_request}\n\n"
+    gen_sql = sql_agent.generate_sql(user_request)
+    yield f"SQL:\n{gen_sql}\n\n"
+    
     # result must be a list of dict
-    rows = sql_agent.execute_sql("TEST")
+    yield "SQL results: \n\n"
+    rows = sql_agent.execute_sql(gen_sql)
 
-    # streaming as JSON lines, good OK
-    # beware: the client must understand these are data and parse the output accordingly
+    # streaming, results are sent as markdown
     async for markdown_line in stream_markdown_table(rows):
         yield markdown_line
 
