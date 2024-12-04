@@ -85,6 +85,9 @@ Classification: analyze_data
 User Query: Who is Larry Ellison?
 Classification: answer_directly
 
+User Query: Fai una lista delle mie attività.
+Classification: generate_sql
+
 ===Question
 {{question}}
 

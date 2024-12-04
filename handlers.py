@@ -35,8 +35,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from config_reader import ConfigReader
 from llm_manager import LLMManager
 from conversation_manager import ConversationManager
-from sql_agent import SQLAgent
-from select_ai_sql_agent import SelectAISQLAgent
+from sql_agent_factory import sql_agent_factory
 from sql_cache import SQLCache
 from prompts_models import PREAMBLE_ANSWER_DIRECTLY, PREAMBLE_ANALYZE_DATA
 from config_private import COMPARTMENT_OCID
@@ -102,20 +101,6 @@ async def stream_markdown_table(rows):
         yield data_row + "\n"
 
 
-def sql_agent_factory(_config: ConfigReader) -> SQLAgent:
-    """
-    get from config the sql_agent type
-    """
-    agent_type = _config.find_key("sql_agent_type")
-
-    if agent_type == "select_ai":
-        # implementation is with ADB Select AI
-        return SelectAISQLAgent(config)
-
-    # if we arrive here: error
-    raise ValueError(f"Unknown SQL agent type: {agent_type}")
-
-
 async def handle_generate_sql(user_request: Any):
     """
     Handle SQL generation requests.
@@ -127,11 +112,11 @@ async def handle_generate_sql(user_request: Any):
     # the threshold for distance. Below two req are considered the same
     zero_distance = float(config.find_key("zero_distance"))
 
-    # get the agent
+    # get the SQL agent defined by config
     sql_agent = sql_agent_factory(config)
 
     # send a first progress update to the client
-    yield f"SQL generation for: {user_request.request_text}\n\n"
+    yield f"✨ Generating SQL for: {user_request.request_text} ✨\n\n"
 
     # check if the request is already in cache
     _sql_from_cache, _ = sql_cache.get(user_request.request_text)
@@ -141,20 +126,20 @@ async def handle_generate_sql(user_request: Any):
         logger.info("Find request in cache, exact match...")
         gen_sql = _sql_from_cache
     else:
-        # try to find one closer
+        # try to find one very close
         _sql_from_cache = sql_cache.find_closer_with_threshold(
             user_request.request_text, zero_distance
         )
 
         if _sql_from_cache is not None:
             # found in cache
-            logger.info("Found in cache...")
             gen_sql = _sql_from_cache
         else:
             # generate
             time_start = time()
             gen_sql = sql_agent.generate_sql(user_request.request_text)
             time_elapsed = round(time() - time_start, 1)
+
             # add in cache
             sql_cache.set(user_request.request_text, gen_sql, time_elapsed)
 

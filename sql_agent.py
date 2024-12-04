@@ -24,6 +24,12 @@ class SQLAgent(ABC):
         """
 
     @abstractmethod
+    def check_sql(self, sql) -> bool:
+        """
+        Check that syntax is ok on the target DB
+        """
+
+    @abstractmethod
     def execute_sql(self, sql: str) -> list[dict]:
         """
         Execute the given SQL query and return the result as a list of dictionaries.

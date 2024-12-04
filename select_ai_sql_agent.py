@@ -77,21 +77,32 @@ class SelectAISQLAgent(SQLAgent):
 
         return gen_sql
 
-    def check_sql(self, sql):
+    def check_sql(self, sql) -> bool:
         """
         Check if SQL syntax is correct
         """
         try:
             with self.get_db_connection() as conn:
                 with conn.cursor() as cursor:
-                    # check that the syntax is correct doing explain plan...
+                    # check that the syntax is correct doing explain plan
+                    # that doesn't need execution, it is faster
                     explain_sql = f"EXPLAIN PLAN FOR {sql}"
                     cursor.execute(explain_sql)
             return True
         except oracledb.DatabaseError as e:
-            (error,) = e.args
-            logger.error("Database error: %s", error.message)
-            logger.error("Invalid SQL: %s", sql)
+            # try with original SQL to handle soecial cases
+            # where explain is not allowed
+            try:
+                with self.get_db_connection() as conn:
+                    logger.info("TRying without explain plan...")
+                    with conn.cursor() as cursor:
+                        # for special sql not allowing explain plan
+                        cursor.execute(sql)
+                return True
+            except oracledb.DatabaseError as e:
+                (error,) = e.args
+                logger.error("Database error: %s", error.message)
+                logger.error("Invalid SQL: %s", sql)
         except Exception as e:
             logger.error("Unexpected error: %s", e)
         return False
