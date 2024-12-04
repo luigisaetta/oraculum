@@ -13,6 +13,7 @@ from config_reader import ConfigReader
 from config_private import DB_USER, DB_PWD, DSN, WALLET_DIR, WALLET_PWD
 from utils import get_console_logger
 
+# create the struct from params in config_private
 CONNECT_ARGS = {
     "user": DB_USER,
     "password": DB_PWD,
@@ -78,11 +79,12 @@ class SelectAISQLAgent(SQLAgent):
 
     def check_sql(self, sql):
         """
-        Check SQL syntax
+        Check if SQL syntax is correct
         """
         try:
             with self.get_db_connection() as conn:
                 with conn.cursor() as cursor:
+                    # check that the syntax is correct doing explain plan...
                     explain_sql = f"EXPLAIN PLAN FOR {sql}"
                     cursor.execute(explain_sql)
             return True

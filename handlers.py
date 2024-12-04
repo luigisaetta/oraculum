@@ -29,6 +29,7 @@ Warnings:
 """
 
 import asyncio
+from time import time
 from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from config_reader import ConfigReader
@@ -36,6 +37,7 @@ from llm_manager import LLMManager
 from conversation_manager import ConversationManager
 from sql_agent import SQLAgent
 from select_ai_sql_agent import SelectAISQLAgent
+from sql_cache import SQLCache
 from prompts_models import PREAMBLE_ANSWER_DIRECTLY, PREAMBLE_ANALYZE_DATA
 from config_private import COMPARTMENT_OCID
 from utils import get_console_logger
@@ -53,6 +55,9 @@ llm_manager = LLMManager(
 )
 # it is a singleton
 conversation_manager = ConversationManager(max_msgs=MAX_MSGS, verbose=VERBOSE)
+
+# it is a singleton
+sql_cache = SQLCache(max_size=1000)
 
 # 0.1 sec
 SMALL_STIME = 0.1
@@ -104,7 +109,7 @@ def sql_agent_factory(_config: ConfigReader) -> SQLAgent:
     agent_type = _config.find_key("sql_agent_type")
 
     if agent_type == "select_ai":
-        # implementation is with Select AI
+        # implementation is with ADB Select AI
         return SelectAISQLAgent(config)
 
     # if we arrive here: error
@@ -117,13 +122,47 @@ async def handle_generate_sql(user_request: Any):
 
     user_request: request in NL
     """
+    # if we want to return the txt of the generated SQL
+    return_sql = bool(config.find_key("return_sql"))
+    # the threshold for distance. Below two req are considered the same
+    zero_distance = float(config.find_key("zero_distance"))
+
     # get the agent
     sql_agent = sql_agent_factory(config)
 
+    # send a first progress update to the client
     yield f"SQL generation for: {user_request.request_text}\n\n"
-    gen_sql = sql_agent.generate_sql(user_request.request_text)
-    yield f"SQL:\n{gen_sql}\n\n"
 
+    # check if the request is already in cache
+    _sql_from_cache, _ = sql_cache.get(user_request.request_text)
+
+    if _sql_from_cache is not None:
+        # exact match
+        logger.info("Find request in cache, exact match...")
+        gen_sql = _sql_from_cache
+    else:
+        # try to find one closer
+        _sql_from_cache = sql_cache.find_closer_with_threshold(
+            user_request.request_text, zero_distance
+        )
+
+        if _sql_from_cache is not None:
+            # found in cache
+            logger.info("Found in cache...")
+            gen_sql = _sql_from_cache
+        else:
+            # generate
+            time_start = time()
+            gen_sql = sql_agent.generate_sql(user_request.request_text)
+            time_elapsed = round(time() - time_start, 1)
+            # add in cache
+            sql_cache.set(user_request.request_text, gen_sql, time_elapsed)
+
+    if return_sql:
+        # return the text of SQL
+        yield f"SQL:\n{gen_sql}\n\n"
+
+    # execute the sql and return results
     # result must be a list of dict
     yield "SQL results: \n\n"
     rows = sql_agent.execute_sql(gen_sql)
@@ -134,6 +173,7 @@ async def handle_generate_sql(user_request: Any):
         f"Data retrieved for request: {user_request.request_text}:\n{rows_as_str}"
     )
 
+    # data retrieved are added to the conversation history as a SYSTEM message
     conversation_manager.add_message(
         user_request.conv_id, SystemMessage(content=msg_text)
     )
@@ -141,6 +181,7 @@ async def handle_generate_sql(user_request: Any):
     # streaming, results are sent as markdown
     async for markdown_line in stream_markdown_table(rows):
         yield markdown_line
+    yield "\n"
 
 
 async def handle_analyze_data(user_request: Any):
@@ -148,6 +189,7 @@ async def handle_analyze_data(user_request: Any):
     Handle text analysis requests.
     """
     verbose = bool(config.find_key("verbose"))
+    # the model to be used
     model_index = config.find_key("index_model_analyze_data")
 
     # Start with preamble
