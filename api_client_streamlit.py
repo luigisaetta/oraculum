@@ -102,9 +102,8 @@ def main():
         ):
             st.session_state["conv_id"] = conv_id
             st.session_state["user_query"] = user_query
-            st.session_state["request_sent"] = (
-                False  # Allow a new request if inputs change
-            )
+            # Allow a new request if inputs change
+            st.session_state["request_sent"] = False
 
         # remove blank at beginning and end
         user_query = user_query.strip()

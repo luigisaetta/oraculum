@@ -18,6 +18,12 @@ class SQLAgent(ABC):
     """
 
     @abstractmethod
+    def get_db_connection(self):
+        """
+        get a DB connection
+        """
+
+    @abstractmethod
     def generate_sql(self, nl_request: str) -> str:
         """
         Generate an SQL query from a natural language request.

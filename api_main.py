@@ -37,9 +37,21 @@ from llm_manager import LLMManager
 from dispatcher import Dispatcher
 from router_with_dispatcher import RouterWithDispatcher
 from config_reader import ConfigReader
+from sql_agent_factory import sql_agent_factory
 from utils import get_console_logger
 
 from config_private import COMPARTMENT_OCID
+from config_private import DB_USER, DB_PWD, DSN, WALLET_DIR, WALLET_PWD
+
+# create the struct from params in config_private
+CONNECT_ARGS = {
+    "user": DB_USER,
+    "password": DB_PWD,
+    "dsn": DSN,
+    "config_dir": WALLET_DIR,
+    "wallet_location": WALLET_DIR,
+    "wallet_password": WALLET_PWD,
+}
 
 # media types
 TEXT_PLAIN = "text/plain"
@@ -131,5 +143,16 @@ def delete_conversation(conv_id: str):
 if __name__ == "__main__":
     HOST = config.find_key("host")
     PORT = int(config.find_key("port"))
+
+    # tst DB connection is ok
+    sql_agent = sql_agent_factory(config)
+    sql_agent.get_db_connection()
+    logger.info("")
+    logger.info(
+        "DB connection as %s to DSN: %s OK...",
+        CONNECT_ARGS["user"],
+        CONNECT_ARGS["dsn"],
+    )
+    logger.info("")
 
     uvicorn.run(app, host=HOST, port=PORT)

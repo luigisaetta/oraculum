@@ -41,7 +41,9 @@ class SelectAISQLAgent(SQLAgent):
         """
         get a connection to data DB
         """
-        return oracledb.connect(**CONNECT_ARGS)
+        conn = oracledb.connect(**CONNECT_ARGS)
+
+        return conn
 
     def generate_sql(self, nl_request: str) -> str:
         """
@@ -89,12 +91,12 @@ class SelectAISQLAgent(SQLAgent):
                     explain_sql = f"EXPLAIN PLAN FOR {sql}"
                     cursor.execute(explain_sql)
             return True
-        except oracledb.DatabaseError as e:
-            # try with original SQL to handle soecial cases
+        except oracledb.DatabaseError:
+            # try with original SQL to handle special cases
             # where explain is not allowed
             try:
                 with self.get_db_connection() as conn:
-                    logger.info("TRying without explain plan...")
+                    logger.info("Trying without explain plan...")
                     with conn.cursor() as cursor:
                         # for special sql not allowing explain plan
                         cursor.execute(sql)

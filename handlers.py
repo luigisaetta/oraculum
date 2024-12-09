@@ -62,6 +62,20 @@ sql_cache = SQLCache(max_size=1000)
 SMALL_STIME = 0.1
 
 
+def calculate_column_widths(rows):
+    """
+    compute column widts for the table
+    """
+    # Get headers and calculate maximum column widths
+    headers = rows[0].keys()
+    column_widths = {key: len(key) for key in headers}
+    # Update column widths based on row contents
+    for row in rows:
+        for key, value in row.items():
+            column_widths[key] = max(column_widths[key], len(str(value)))
+    return column_widths
+
+
 async def stream_markdown_table(rows):
     """
     Stream rows of data as a Markdown table with padded columns.
@@ -69,14 +83,8 @@ async def stream_markdown_table(rows):
     if not rows:
         return
 
-    # Get headers and calculate maximum column widths
     headers = rows[0].keys()
-    column_widths = {key: len(key) for key in headers}  # Start with header widths
-
-    # Update column widths based on row contents
-    for row in rows:
-        for key, value in row.items():
-            column_widths[key] = max(column_widths[key], len(str(value)))
+    column_widths = calculate_column_widths(rows)
 
     # Generate the header row with padding
     header_row = (
@@ -145,7 +153,7 @@ async def handle_generate_sql(user_request: Any):
 
     if return_sql:
         # return the text of SQL
-        yield f"SQL:\n{gen_sql}\n\n"
+        yield f"SQL🛢️✨:\n{gen_sql}\n\n"
 
     # execute the sql and return results
     # result must be a list of dict
@@ -173,7 +181,6 @@ async def handle_analyze_data(user_request: Any):
     """
     Handle text analysis requests.
     """
-    verbose = bool(config.find_key("verbose"))
     # the model to be used
     model_index = config.find_key("index_model_analyze_data")
 
@@ -184,7 +191,7 @@ async def handle_analyze_data(user_request: Any):
         all_messages.append(msg)
     all_messages.append(HumanMessage(content=user_request.request_text))
 
-    if verbose:
+    if VERBOSE:
         logger.info(
             "calling Model %s...",
             llm_manager.get_llm_model_name(model_index),
@@ -209,7 +216,7 @@ async def handle_not_allowed(user_request: Any):
     Handle response for not allowed requests.
     """
     await asyncio.sleep(0.1)
-    yield f"Request: {user_request.request_text} not allowed\n"
+    yield f"Request: {user_request.request_text} is not allowed !!!\n"
     await asyncio.sleep(0.1)
     yield "DDL/DML request are not allowed! \n"
 
@@ -243,7 +250,7 @@ async def handle_answer_directly(user_request: Any):
     message_history = conversation_manager.get_conversation(user_request.conv_id)
     for msg in message_history:
         all_messages.append(msg)
-    all_messages.append(HumanMessage(content=user_request))
+    all_messages.append(HumanMessage(content=user_request.request_text))
 
     if verbose:
         logger.info(
@@ -252,8 +259,6 @@ async def handle_answer_directly(user_request: Any):
         )
         logger.info("")
 
-    await asyncio.sleep(SMALL_STIME)
-    yield f"Request: {user_request.request_text}\n"
     await asyncio.sleep(SMALL_STIME)
     yield "Answer in preparation...\n\n"
 

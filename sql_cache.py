@@ -41,6 +41,8 @@ from config_private import COMPARTMENT_OCID
 config = ConfigReader("./config.toml")
 logger = get_console_logger()
 
+VERBOSE = bool(config.find_key("verbose"))
+
 
 class SQLCache:
     """
@@ -219,10 +221,11 @@ class SQLCache:
         """
         request_candidate, sql_candidate, min_distance = self.find_closer(request2)
 
-        logger.info("")
-        logger.info(
-            "Closer in cache: %s, distance: %5.3f", request_candidate, min_distance
-        )
+        if VERBOSE:
+            logger.info("")
+            logger.info(
+                "Closer in cache: %s, distance: %5.3f", request_candidate, min_distance
+            )
 
         if min_distance <= threshold:
             # found in cache
