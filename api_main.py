@@ -32,6 +32,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
+# APM integration
+from opentelemetry import trace
+from tracer_singleton import TracerSingleton
+
 from conversation_manager import ConversationManager
 from llm_manager import LLMManager
 from dispatcher import Dispatcher
@@ -87,14 +91,23 @@ app = FastAPI()
 # Initialize ConversationManager
 conversation_manager = ConversationManager(max_msgs=MAX_MSGS, verbose=VERBOSE)
 
+# to integrate with OCI APM
+TRACER = TracerSingleton.get_instance()
+
 
 @app.post("/streaming_chat")
+@TRACER.start_as_current_span("streaming_chat")
 async def streaming_chat(user_request: UserRequest):
     """
     handle the streaming chat
     """
+    current_span = trace.get_current_span()
+
     # only the text of the request
     request_text = user_request.request_text
+
+    # send to APM
+    current_span.set_attribute("genai-chat-input", request_text)
 
     if not request_text.strip():
         raise HTTPException(status_code=400, detail="Request cannot be empty.")
@@ -144,7 +157,7 @@ if __name__ == "__main__":
     HOST = config.find_key("host")
     PORT = int(config.find_key("port"))
 
-    # tst DB connection is ok
+    # test DB connection is ok
     sql_agent = sql_agent_factory(config)
     sql_agent.get_db_connection()
     logger.info("")

@@ -8,6 +8,7 @@ A very good guide is this one:
 """
 
 import oracledb
+from tracer_singleton import TracerSingleton
 from sql_agent import SQLAgent
 from config_reader import ConfigReader
 from config_private import DB_USER, DB_PWD, DSN, WALLET_DIR, WALLET_PWD
@@ -24,6 +25,9 @@ CONNECT_ARGS = {
 }
 
 logger = get_console_logger()
+
+# to integrate with APM
+TRACER = TracerSingleton.get_instance()
 
 
 class SelectAISQLAgent(SQLAgent):
@@ -45,6 +49,7 @@ class SelectAISQLAgent(SQLAgent):
 
         return conn
 
+    @TRACER.start_as_current_span("generate_sql")
     def generate_sql(self, nl_request: str) -> str:
         """
         Generate SQL using Select AI
@@ -72,10 +77,10 @@ class SelectAISQLAgent(SQLAgent):
 
                 for row in cursor:
                     gen_sql = row[0]
-
-                    if verbose:
-                        logger.info(gen_sql)
                     break
+
+        if verbose:
+            logger.info(gen_sql)
 
         return gen_sql
 

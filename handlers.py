@@ -31,8 +31,10 @@ Warnings:
 import asyncio
 from time import time
 from typing import Any
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from config_reader import ConfigReader
+from tracer_singleton import TracerSingleton
 from llm_manager import LLMManager
 from conversation_manager import ConversationManager
 from sql_agent_factory import sql_agent_factory
@@ -46,6 +48,7 @@ config = ConfigReader("./config.toml")
 
 VERBOSE = bool(config.find_key("verbose"))
 MAX_MSGS = config.find_key("max_msgs")
+TRACER_NAME = config.find_key("tracer_name")
 
 llm_manager = LLMManager(
     config,
@@ -60,6 +63,8 @@ sql_cache = SQLCache(max_size=1000)
 
 # 0.1 sec
 SMALL_STIME = 0.1
+# to integrate with OCI APM
+TRACER = TracerSingleton.get_instance()
 
 
 def calculate_column_widths(rows):
@@ -109,6 +114,7 @@ async def stream_markdown_table(rows):
         yield data_row + "\n"
 
 
+@TRACER.start_as_current_span("handle_generate_sql")
 async def handle_generate_sql(user_request: Any):
     """
     Handle SQL generation requests.
@@ -143,7 +149,7 @@ async def handle_generate_sql(user_request: Any):
             # found in cache
             gen_sql = _sql_from_cache
         else:
-            # generate
+            # generate the SQL
             time_start = time()
             gen_sql = sql_agent.generate_sql(user_request.request_text)
             time_elapsed = round(time() - time_start, 1)
@@ -211,6 +217,7 @@ async def handle_analyze_data(user_request: Any):
         yield str(chunk.content)
 
 
+@TRACER.start_as_current_span("handle_not_allowed")
 async def handle_not_allowed(user_request: Any):
     """
     Handle response for not allowed requests.
