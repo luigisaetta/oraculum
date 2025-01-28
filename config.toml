@@ -2,6 +2,20 @@
 verbose = false
 debug = false
 
+[api]
+host = "0.0.0.0"
+port = "8888"
+# the api timeout
+api_timeout = 120
+
+[conversation_history]
+# max number of msgs in conversation history
+max_msgs = 20
+
+[embeddings]
+embed_model = "cohere.embed-english-v3.0"
+embed_endpoint = "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com"
+
 [llm]
 auth_type = "API_KEY"
 temperature = 0
@@ -22,3 +36,25 @@ models_endpoints = [
 
 # for the router use command-r-plus !!!
 index_model_for_routing = 1
+index_model_answer_directly = 0
+index_model_analyze_data = 2
+
+[sql_agent]
+sql_agent_type = "select_ai"
+profile_name = "OCI_GENAI_LLAMA31"
+
+# if we want sql text returned to client
+return_sql = true
+
+[sql_cache]
+# under this distance two request are considered the same
+# seems that with this value we handle small variations, like uppercase..
+zero_distance = 0.005
+
+[open_telemetry]
+# integration with APM
+trace_enable = false
+tracer_name = "oraculum"
+service_name = "oraculum"
+
+apm_endpoint = "https://aaaadec2jjn3maaaaaaaaach4e.apm-agt.eu-frankfurt-1.oci.oraclecloud.com/20200101/opentelemetry/public/v1/traces"
