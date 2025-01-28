@@ -28,6 +28,7 @@ Warnings:
     This module is in development, may change in future versions.
 """
 
+import os
 import asyncio
 from time import time
 from typing import Any
@@ -44,7 +45,9 @@ from config_private import COMPARTMENT_OCID
 from utils import get_console_logger
 
 logger = get_console_logger()
-config = ConfigReader("./config.toml")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, "config.toml")
+config = ConfigReader(config_path)
 
 VERBOSE = bool(config.find_key("verbose"))
 MAX_MSGS = config.find_key("max_msgs")
@@ -222,9 +225,9 @@ async def handle_not_allowed(user_request: Any):
     """
     Handle response for not allowed requests.
     """
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(SMALL_STIME)
     yield f"Request: {user_request.request_text} is not allowed !!!\n"
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(SMALL_STIME)
     yield "DDL/DML request are not allowed! \n"
 
 
@@ -261,12 +264,11 @@ async def handle_answer_directly(user_request: Any):
 
     if verbose:
         logger.info(
-            "calling Model %s...",
+            "Calling model %s...",
             llm_manager.get_llm_model_name(model_index),
         )
         logger.info("")
 
-    await asyncio.sleep(SMALL_STIME)
     yield "Answer in preparation...\n\n"
 
     # call the model

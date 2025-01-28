@@ -1,5 +1,5 @@
 """
-Tis is the abstract class that defines the protocol for the 
+This is the abstract class that defines the protocol for the 
 SQL agent
 
 we can have different implementations:

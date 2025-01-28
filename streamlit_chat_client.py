@@ -2,13 +2,16 @@
     Client per interagire con l'API AI Assistant con supporto streaming.
 """
 
+import os
 from httpx import AsyncClient, Timeout, RequestError
 import requests
 
 import streamlit as st
 from config_reader import ConfigReader
 
-config = ConfigReader("./config.toml")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, "config.toml")
+config = ConfigReader(config_path)
 TIMEOUT = Timeout(float(config.find_key("api_timeout")))
 
 

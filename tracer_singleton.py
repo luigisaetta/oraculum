@@ -4,6 +4,7 @@ Tracer Singleton
     to support integration with OCI APM
 """
 
+import os
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -56,7 +57,10 @@ class TracerSingleton:
         Init tracer for APM integration, leggendo i parametri dalla configurazione.
         """
         # Legge la configurazione dal file (puoi personalizzare il percorso)
-        config = ConfigReader("./config.toml")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(current_dir, "config.toml")
+        config = ConfigReader(config_path)
+
         trace_enable = config.find_key("trace_enable")
         apm_endpoint = config.find_key("apm_endpoint")
         service_name = config.find_key("service_name")

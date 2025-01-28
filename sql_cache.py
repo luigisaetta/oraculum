@@ -28,6 +28,7 @@ Warnings:
     This module is in development, may change in future versions.
 """
 
+import os
 import hashlib
 from collections import defaultdict
 import numpy as np
@@ -38,7 +39,9 @@ from utils import get_console_logger
 
 from config_private import COMPARTMENT_OCID
 
-config = ConfigReader("./config.toml")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, "config.toml")
+config = ConfigReader(config_path)
 logger = get_console_logger()
 
 VERBOSE = bool(config.find_key("verbose"))

@@ -27,6 +27,7 @@ Warnings:
     This module is in development, may change in future versions.
 """
 
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -72,7 +73,10 @@ class UserRequest(BaseModel):
 
 
 logger = get_console_logger()
-config = ConfigReader("./config.toml")
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, "config.toml")
+config = ConfigReader(config_path)
 
 VERBOSE = bool(config.find_key("verbose"))
 MAX_MSGS = config.find_key("max_msgs")

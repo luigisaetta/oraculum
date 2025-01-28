@@ -2,6 +2,7 @@
 Client for API v2
 """
 
+import os
 import random
 import asyncio
 import requests
@@ -12,7 +13,9 @@ from config_reader import ConfigReader
 from streamlit_chat_client import StreamlitChatClient
 from utils import get_console_logger
 
-config = ConfigReader("./config.toml")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, "config.toml")
+config = ConfigReader(config_path)
 logger = get_console_logger()
 
 API_PORT = int(config.find_key("port"))
